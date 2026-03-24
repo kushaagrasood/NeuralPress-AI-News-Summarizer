@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { fetchSummary } from "../data/gemini";
 import ParagraphSummary from "./ParagraphSummary";
 import StructuredSummary from "./StructuredSummary";
@@ -17,20 +17,41 @@ export default function SummaryPanel({ article }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [length, setLength] = useState("medium");
+  const [progress, setProgress] = useState(0);
+
+  const paragraphRef = useRef(null);
 
   async function handleSummarize() {
     if (!article) return;
     setLoading(true);
     setError(null);
     setSummaryData(null);
+    setProgress(0);
+
+    // Animate progress bar while loading
+    let p = 0;
+    const tick = setInterval(() => {
+      p += Math.random() * 18;
+      if (p > 88) p = 88;
+      setProgress(p);
+    }, 300);
+
     try {
       const result = await fetchSummary(article.body, length);
+      clearInterval(tick);
+      setProgress(100);
       setSummaryData(result);
     } catch (err) {
+      clearInterval(tick);
+      setProgress(0);
       setError(err.message || "Failed to generate summary.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function scrollToParagraph() {
+    paragraphRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   if (!article) {
@@ -48,7 +69,7 @@ export default function SummaryPanel({ article }) {
     <main className="summary-panel">
       {/* Article Header */}
       <div className="article-header">
-        <span className={`category-badge ${catClass}`} data-cat={article.category}>
+        <span className={`category-badge ${catClass}`}>
           {article.category}
         </span>
         <h1 className="article-title">{article.headline}</h1>
@@ -68,13 +89,21 @@ export default function SummaryPanel({ article }) {
             </button>
           ))}
         </div>
-        <button
-          className="summarize-btn"
-          onClick={handleSummarize}
-          disabled={loading}
-        >
-          {loading ? "Analyzing..." : "✦ Summarize"}
-        </button>
+        <div className="summarize-row">
+          <button
+            className="summarize-btn"
+            onClick={handleSummarize}
+            disabled={loading}
+          >
+            {loading ? "Analyzing..." : "Summarize"}
+          </button>
+          <div className="summarize-progress-track">
+            <div
+              className="summarize-progress-fill"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Loading */}
@@ -88,11 +117,21 @@ export default function SummaryPanel({ article }) {
       {/* Error */}
       {error && <div className="error-box">{error}</div>}
 
-      {/* Summary Output — both sections always shown */}
+      {/* Summary Output — Key Takeaways FIRST, then scroll button, then Linear Summary */}
       {summaryData && !loading && (
         <div className="summary-output">
-          <ParagraphSummary paragraph={summaryData.paragraph} />
+          {/* 1. Key Takeaways (Structured Insight Cards) */}
           <StructuredSummary sections={summaryData.sections} />
+
+          {/* 2. Scroll-down nudge */}
+          <button className="scroll-down-btn" onClick={scrollToParagraph}>
+            ↓ Scroll for paragraph summary
+          </button>
+
+          {/* 3. Linear (Paragraph) Summary */}
+          <div ref={paragraphRef}>
+            <ParagraphSummary paragraph={summaryData.paragraph} />
+          </div>
         </div>
       )}
     </main>

@@ -9,16 +9,13 @@ function getCategoryClass(category) {
 
 export default function ArticleCard({ article, isSelected, onSelect }) {
   const catClass = getCategoryClass(article.category);
-
   return (
     <div
       className={`article-card ${isSelected ? "selected" : ""}`}
       onClick={() => onSelect(article)}
     >
       <div className="card-top">
-        <span className={`category-badge ${catClass}`} data-cat={article.category}>
-          {article.category}
-        </span>
+        <span className={`category-badge ${catClass}`}>{article.category}</span>
         <h3 className="card-headline">{article.headline}</h3>
         <p className="card-preview">{article.preview}</p>
       </div>

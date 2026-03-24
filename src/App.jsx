@@ -29,10 +29,7 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        <NewsFeed
-          selectedArticle={selectedArticle}
-          onSelect={setSelectedArticle}
-        />
+        <NewsFeed selectedArticle={selectedArticle} onSelect={setSelectedArticle} />
         <SummaryPanel article={selectedArticle} />
       </div>
     </div>

@@ -1,51 +1,24 @@
-const ACCENT_COLORS = [
-  {
-    border: "rgba(0,212,170,0.3)",
-    bg: "rgba(0,212,170,0.05)",
-    label: "#00d4aa",
-  },
-  {
-    border: "rgba(255,126,179,0.3)",
-    bg: "rgba(255,126,179,0.05)",
-    label: "#ff7eb3",
-  },
-  {
-    border: "rgba(121,212,253,0.3)",
-    bg: "rgba(121,212,253,0.05)",
-    label: "#79d4fd",
-  },
-  {
-    border: "rgba(255,179,71,0.3)",
-    bg: "rgba(255,179,71,0.05)",
-    label: "#ffb347",
-  },
-  {
-    border: "rgba(124,111,239,0.3)",
-    bg: "rgba(124,111,239,0.05)",
-    label: "#7c6fef",
-  },
-  {
-    border: "rgba(82,196,136,0.3)",
-    bg: "rgba(82,196,136,0.05)",
-    label: "#52c488",
-  },
+const COLORS = [
+  { border: "rgba(0,229,192,0.3)",   bg: "rgba(0,229,192,0.05)",   label: "#00e5c0" },
+  { border: "rgba(255,95,160,0.3)",  bg: "rgba(255,95,160,0.05)",  label: "#ff5fa0" },
+  { border: "rgba(64,200,255,0.3)",  bg: "rgba(64,200,255,0.05)",  label: "#40c8ff" },
+  { border: "rgba(255,208,0,0.3)",   bg: "rgba(255,208,0,0.05)",   label: "#ffd000" },
+  { border: "rgba(167,139,250,0.3)", bg: "rgba(167,139,250,0.05)", label: "#a78bfa" },
+  { border: "rgba(96,210,128,0.3)",  bg: "rgba(96,210,128,0.05)",  label: "#60d280" },
 ];
 
 export default function InsightBox({ title, insight, index }) {
-  const color = ACCENT_COLORS[index % ACCENT_COLORS.length];
-
+  const c = COLORS[index % COLORS.length];
   return (
     <div
       className="insight-box fade-in"
       style={{
-        borderColor: color.border,
-        background: color.bg,
-        animationDelay: `${index * 0.08}s`,
+        borderColor: c.border,
+        background: c.bg,
+        animationDelay: `${index * 0.07}s`,
       }}
     >
-      <div className="insight-title" style={{ color: color.label }}>
-        {title}
-      </div>
+      <div className="insight-title" style={{ color: c.label }}>{title}</div>
       <p className="insight-text">{insight}</p>
     </div>
   );
