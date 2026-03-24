@@ -3,12 +3,20 @@ import { fetchSummary } from "../data/gemini";
 import ParagraphSummary from "./ParagraphSummary";
 import StructuredSummary from "./StructuredSummary";
 
+function getCategoryClass(category) {
+  const c = (category || "").toUpperCase();
+  if (c === "AI") return "cat-ai";
+  if (c === "SPACE") return "cat-space";
+  if (c.includes("TECH")) return "cat-tech";
+  if (c === "SCIENCE") return "cat-science";
+  return "cat-ai";
+}
+
 export default function SummaryPanel({ article }) {
-  const [summaryData, setSummaryData] = useState(null); //holds the AI response
-  const [loading, setLoading] = useState(false); // tracks whether an API call is currently in progress
+  const [summaryData, setSummaryData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [mode, setMode] = useState("paragraph"); // mode: "paragraph"(default) or "structured"
-  const [length, setLength] = useState("medium"); // summary length: "medium"(default) or "short" or "detailed"
+  const [length, setLength] = useState("medium");
 
   async function handleSummarize() {
     if (!article) return;
@@ -34,11 +42,15 @@ export default function SummaryPanel({ article }) {
     );
   }
 
+  const catClass = getCategoryClass(article.category);
+
   return (
     <main className="summary-panel">
       {/* Article Header */}
       <div className="article-header">
-        <span className="category-badge">{article.category}</span>
+        <span className={`category-badge ${catClass}`} data-cat={article.category}>
+          {article.category}
+        </span>
         <h1 className="article-title">{article.headline}</h1>
         <p className="article-body">{article.body}</p>
       </div>
@@ -76,31 +88,11 @@ export default function SummaryPanel({ article }) {
       {/* Error */}
       {error && <div className="error-box">{error}</div>}
 
-      {/* Summary Output */}
+      {/* Summary Output — both sections always shown */}
       {summaryData && !loading && (
         <div className="summary-output">
-          {/* Mode Toggle */}
-          <div className="mode-toggle">
-            <button
-              className={`mode-btn ${mode === "paragraph" ? "active" : ""}`}
-              onClick={() => setMode("paragraph")}
-            >
-              ¶ Linear View
-            </button>
-            <button
-              className={`mode-btn ${mode === "structured" ? "active" : ""}`}
-              onClick={() => setMode("structured")}
-            >
-              ⊞ Insight View
-            </button>
-          </div>
-
-          {/* Render Active Mode */}
-          {mode === "paragraph" ? (
-            <ParagraphSummary paragraph={summaryData.paragraph} />
-          ) : (
-            <StructuredSummary sections={summaryData.sections} />
-          )}
+          <ParagraphSummary paragraph={summaryData.paragraph} />
+          <StructuredSummary sections={summaryData.sections} />
         </div>
       )}
     </main>

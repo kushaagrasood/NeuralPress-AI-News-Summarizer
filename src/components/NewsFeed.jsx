@@ -6,7 +6,7 @@ export default function NewsFeed({ selectedArticle, onSelect }) {
     <aside className="news-feed">
       <div className="feed-header">
         <span className="feed-dot" />
-        <h2>Live Feed</h2>
+        <span>Live Feed</span>
       </div>
       <div className="feed-list">
         {articles.map((article) => (

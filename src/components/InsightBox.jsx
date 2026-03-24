@@ -1,8 +1,34 @@
 const ACCENT_COLORS = [
-  { border: "#4a8fff", bg: "rgba(74, 143, 255, 0.07)", label: "#6b9fff" },
-  { border: "#e06b6b", bg: "rgba(224, 107, 107, 0.07)", label: "#e07878" },
-  { border: "#52b788", bg: "rgba(82, 183, 136, 0.07)", label: "#5dc995" },
-  { border: "#d4a24e", bg: "rgba(212, 162, 78, 0.07)",  label: "#e0b05a" },
+  {
+    border: "rgba(0,212,170,0.3)",
+    bg: "rgba(0,212,170,0.05)",
+    label: "#00d4aa",
+  },
+  {
+    border: "rgba(255,126,179,0.3)",
+    bg: "rgba(255,126,179,0.05)",
+    label: "#ff7eb3",
+  },
+  {
+    border: "rgba(121,212,253,0.3)",
+    bg: "rgba(121,212,253,0.05)",
+    label: "#79d4fd",
+  },
+  {
+    border: "rgba(255,179,71,0.3)",
+    bg: "rgba(255,179,71,0.05)",
+    label: "#ffb347",
+  },
+  {
+    border: "rgba(124,111,239,0.3)",
+    bg: "rgba(124,111,239,0.05)",
+    label: "#7c6fef",
+  },
+  {
+    border: "rgba(82,196,136,0.3)",
+    bg: "rgba(82,196,136,0.05)",
+    label: "#52c488",
+  },
 ];
 
 export default function InsightBox({ title, insight, index }) {
@@ -14,7 +40,7 @@ export default function InsightBox({ title, insight, index }) {
       style={{
         borderColor: color.border,
         background: color.bg,
-        animationDelay: `${index * 0.1}s`,
+        animationDelay: `${index * 0.08}s`,
       }}
     >
       <div className="insight-title" style={{ color: color.label }}>
