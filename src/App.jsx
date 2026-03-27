@@ -1,11 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NewsFeed from "./components/NewsFeed";
 import SummaryPanel from "./components/SummaryPanel";
+import { fetchNews } from "./data/news";
 import "./App.css";
 
 export default function App() {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [theme, setTheme] = useState("dark");
+
+  // ── Live news state ─────────────────────────────────────
+  const [articles, setArticles] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  useEffect(() => {
+    async function loadNews() {
+      setFeedLoading(true);
+      setFeedError(null);
+      try {
+        const { articles: fetched, fetchedAt } = await fetchNews();
+        setArticles(fetched);
+        setLastUpdated(new Date(fetchedAt));
+      } catch (err) {
+        console.error("Failed to fetch news:", err);
+        setFeedError(err.message || "Failed to load news.");
+      } finally {
+        setFeedLoading(false);
+      }
+    }
+    loadNews();
+  }, []);
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -29,7 +54,14 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        <NewsFeed selectedArticle={selectedArticle} onSelect={setSelectedArticle} />
+        <NewsFeed
+          articles={articles}
+          feedLoading={feedLoading}
+          feedError={feedError}
+          lastUpdated={lastUpdated}
+          selectedArticle={selectedArticle}
+          onSelect={setSelectedArticle}
+        />
         <SummaryPanel article={selectedArticle} />
       </div>
     </div>
