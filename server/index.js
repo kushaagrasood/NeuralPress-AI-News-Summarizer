@@ -1,9 +1,14 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
-dotenv.config({ path: "../.env" });
+// ── Load server/.env (API keys live here, NOT in the root .env) ──────────────
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, ".env") });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -12,12 +17,15 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const WORLDNEWS_API_KEY = process.env.WORLDNEWS_API_KEY;
 
 if (!GEMINI_API_KEY || !WORLDNEWS_API_KEY) {
-  console.error("❌  Missing API keys in .env — set GEMINI_API_KEY and WORLDNEWS_API_KEY");
+  console.error("❌  Missing API keys — create server/.env with GEMINI_API_KEY and WORLDNEWS_API_KEY");
   process.exit(1);
 }
 
-// ── CORS ────────────────────────────────────────────────────────────────────
-// In production replace with your actual domain
+// ── Security headers (helmet) ─────────────────────────────────────────────────
+app.use(helmet());
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// In production replace ALLOWED_ORIGINS with your actual domain
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:4173")
   .split(",")
   .map((s) => s.trim());
@@ -36,7 +44,7 @@ app.use(
 
 app.use(express.json({ limit: "50kb" }));
 
-// ── Rate limiters ────────────────────────────────────────────────────────────
+// ── Rate limiters ─────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 200,
@@ -59,12 +67,12 @@ const newsLimiter = rateLimit({
 
 app.use(globalLimiter);
 
-// ── In-memory news cache (server-side) ──────────────────────────────────────
+// ── In-memory news cache (server-side, 5 min) ─────────────────────────────────
 let newsCache = null;
 let newsCacheTs = 0;
-const NEWS_CACHE_MS = 5 * 60 * 1000; // 5 minutes
+const NEWS_CACHE_MS = 5 * 60 * 1000;
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
 });
@@ -122,7 +130,7 @@ app.get("/api/news", newsLimiter, async (req, res) => {
   }
 });
 
-// ── Gemini summarise endpoint ────────────────────────────────────────────────
+// ── Gemini summarise endpoint ─────────────────────────────────────────────────
 app.post("/api/summarise", geminiLimiter, async (req, res) => {
   const { articleText, length = "medium" } = req.body;
 
@@ -197,6 +205,18 @@ ${articleText}`;
   }
 });
 
+// ── Serve built frontend in production ───────────────────────────────────────
+// When NODE_ENV=production, the Express server also serves the Vite dist/ build.
+// This way you only need one process on your server.
+if (process.env.NODE_ENV === "production") {
+  const distPath = join(__dirname, "../dist");
+  app.use(express.static(distPath));
+  // SPA fallback — all non-API routes serve index.html
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(join(distPath, "index.html"));
+  });
+}
+
 // ── 404 catch-all ─────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: "Not found." }));
 
@@ -208,15 +228,13 @@ app.use((err, _req, res, _next) => {
 
 app.listen(PORT, () => {
   console.log(`✅  NeuralPress API server running on http://localhost:${PORT}`);
+  console.log(`   Env: ${process.env.NODE_ENV || "development"}`);
   console.log(`   Gemini key: ${GEMINI_API_KEY.slice(0, 8)}...`);
   console.log(`   NewsAPI key: ${WORLDNEWS_API_KEY.slice(0, 8)}...`);
 });
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Map WorldNewsAPI's raw category strings to our display labels.
-// API categories: technology, science, health, politics, business, sports,
-//                 entertainment, environment, food, travel, general, etc.
 const CATEGORY_MAP = {
   technology: "Tech",
   science: "Science",
@@ -237,12 +255,8 @@ function normalizeCategory(apiCategory) {
   return CATEGORY_MAP[apiCategory.toLowerCase()] || null;
 }
 
-// Keyword fallback — only fires when the API returns no category.
-// Uses title-match only (first 120 chars) to avoid false positives from
-// long body text that happens to mention a keyword tangentially.
 function getCategory(titleAndText) {
   const t = (titleAndText || "").toLowerCase();
-  // Check title portion first (higher confidence)
   if (/\bai\b|artificial intelligence|machine learning|chatgpt|llm\b/.test(t)) return "AI";
   if (/\bspace\b|nasa|rocket|satellite|asteroid|orbit/.test(t)) return "Space";
   if (/crypto|bitcoin|ethereum|\bstock\b|\bbank\b|wall street/.test(t)) return "Finance";
@@ -253,9 +267,6 @@ function getCategory(titleAndText) {
   return "General";
 }
 
-// Extract a human-readable source name from a URL.
-// e.g. "https://www.timesofindia.com/..." → "Times of India"
-// Falls back to the bare hostname if no pretty name is known.
 const SOURCE_NAMES = {
   "timesofindia.com": "Times of India",
   "bbc.com": "BBC News",
@@ -320,20 +331,19 @@ function extractSourceName(url) {
   if (!url) return null;
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, "");
-    // Check for exact match first, then try parent domain
     if (SOURCE_NAMES[hostname]) return SOURCE_NAMES[hostname];
-    // Try stripping one subdomain level (e.g. tech.co.uk → co.uk won't match, but covers cases like news.bbc.co.uk)
     const parts = hostname.split(".");
     if (parts.length > 2) {
       const parent = parts.slice(-2).join(".");
       if (SOURCE_NAMES[parent]) return SOURCE_NAMES[parent];
     }
-    // Fallback: prettify the raw hostname (remove TLD, capitalise)
     const base = parts.slice(0, parts.length > 2 ? -2 : -1).join(" ");
-    return base
-      .split(/[-_]/)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ") || hostname;
+    return (
+      base
+        .split(/[-_]/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ") || hostname
+    );
   } catch {
     return null;
   }
