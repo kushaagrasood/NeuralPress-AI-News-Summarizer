@@ -32,6 +32,20 @@
   --cat-tech-bg: #ffd000;
   --cat-science-color: #0a0f14;
   --cat-science-bg: #40c8ff;
+  --cat-health-color: #0a0f14;
+  --cat-health-bg: #6fe087;
+  --cat-finance-color: #0a0f14;
+  --cat-finance-bg: #ffb347;
+  --cat-politics-color: #0a0f14;
+  --cat-politics-bg: #d48aff;
+  --cat-environment-color: #0a0f14;
+  --cat-environment-bg: #90d55a;
+  --cat-sports-color: #0a0f14;
+  --cat-sports-bg: #ff7c52;
+  --cat-entertainment-color: #0a0f14;
+  --cat-entertainment-bg: #ff9de2;
+  --cat-general-color: #cdd6e0;
+  --cat-general-bg: #2e3947;
 }
 
 [data-theme="light"] {
@@ -54,6 +68,20 @@
   --cat-tech-bg: #e8a800;
   --cat-science-color: #ffffff;
   --cat-science-bg: #0078a8;
+  --cat-health-color: #0d1117;
+  --cat-health-bg: #2fb84e;
+  --cat-finance-color: #0d1117;
+  --cat-finance-bg: #e08000;
+  --cat-politics-color: #ffffff;
+  --cat-politics-bg: #8b3fc8;
+  --cat-environment-color: #0d1117;
+  --cat-environment-bg: #5a9e20;
+  --cat-sports-color: #ffffff;
+  --cat-sports-bg: #d44000;
+  --cat-entertainment-color: #0d1117;
+  --cat-entertainment-bg: #e0609a;
+  --cat-general-color: #4a5668;
+  --cat-general-bg: #dde3ec;
 }
 
 /* ── Base ──────────────────────────────────────── */
@@ -253,6 +281,14 @@ body {
   overflow: hidden;
 }
 
+.card-source {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: -3px 0 6px;
+  letter-spacing: 0.2px;
+}
+
 .card-footer {
   display: flex;
   align-items: center;
@@ -293,6 +329,41 @@ body {
 .category-badge.cat-science {
   color: var(--cat-science-color);
   background: var(--cat-science-bg);
+}
+
+.category-badge.cat-health {
+  color: var(--cat-health-color);
+  background: var(--cat-health-bg);
+}
+
+.category-badge.cat-finance {
+  color: var(--cat-finance-color);
+  background: var(--cat-finance-bg);
+}
+
+.category-badge.cat-politics {
+  color: var(--cat-politics-color);
+  background: var(--cat-politics-bg);
+}
+
+.category-badge.cat-environment {
+  color: var(--cat-environment-color);
+  background: var(--cat-environment-bg);
+}
+
+.category-badge.cat-sports {
+  color: var(--cat-sports-color);
+  background: var(--cat-sports-bg);
+}
+
+.category-badge.cat-entertainment {
+  color: var(--cat-entertainment-color);
+  background: var(--cat-entertainment-bg);
+}
+
+.category-badge.cat-general {
+  color: var(--cat-general-color);
+  background: var(--cat-general-bg);
 }
 
 /* ── Summary Panel ─────────────────────────────── */
@@ -355,6 +426,14 @@ body {
   margin: 9px 0 0;
   letter-spacing: -0.5px;
   color: var(--text);
+}
+
+.article-source {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 3px 0 0;
+  letter-spacing: 0.2px;
 }
 
 .article-body {
@@ -822,4 +901,218 @@ body {
   padding: 34px 14px;
   color: var(--muted);
   font-size: 13px;
+}
+/* ══════════════════════════════════════════════════
+   RESPONSIVE / MOBILE LAYOUT
+   ══════════════════════════════════════════════════ */
+
+/* ── Mobile back button (hidden on desktop) ─────── */
+.mobile-back-btn {
+  display: none;
+}
+
+/* ── Tablet: narrow the sidebar ────────────────── */
+@media (max-width: 900px) {
+  .app-body {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .summary-panel {
+    padding: 20px 20px;
+  }
+
+  .article-title {
+    font-size: 24px;
+  }
+
+  .insight-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Mobile: single-panel stacked layout ─────────── */
+@media (max-width: 640px) {
+  /* Remove fixed viewport lock — allow natural scroll */
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  /* Header: shrink and wrap gracefully */
+  .app-header {
+    padding: 0 14px;
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .header-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    /* Shorten text via CSS — JS already sets shorter label */
+  }
+
+  .logo-text {
+    font-size: 17px;
+  }
+
+  /* Body becomes a single-column full-width stack */
+  .app-body {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Feed panel: full width, natural height, no overflow lock */
+  .news-feed {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-y: visible;
+    height: auto;
+  }
+
+  /* Summary panel: full width, natural scroll */
+  .summary-panel {
+    width: 100%;
+    height: auto;
+    overflow-y: visible;
+    padding: 16px 14px 32px;
+  }
+
+  /* ── Mobile panel switching ──────────────────── */
+  /* When viewing feed on mobile: hide summary panel */
+  .app-body.mobile-view-feed .summary-panel {
+    display: none;
+  }
+
+  /* When viewing summary on mobile: hide feed */
+  .app-body.mobile-view-summary .news-feed {
+    display: none;
+  }
+
+  /* ── Mobile back button ───────────────────────── */
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 7px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: background 0.15s, color 0.15s;
+    /* Only show inside summary panel on mobile */
+  }
+
+  .mobile-back-btn:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ── Article title ────────────────────────────── */
+  .article-title {
+    font-size: 20px;
+    letter-spacing: -0.2px;
+  }
+
+  /* Sticky title bar: reset top offset for mobile */
+  .article-title-bar {
+    position: static;
+    padding: 8px 0 6px;
+  }
+
+  /* ── Controls bar: stack vertically ─────────── */
+  .controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .length-selector {
+    width: 100%;
+  }
+
+  .length-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .summarize-row {
+    width: 100%;
+    flex-direction: row;
+  }
+
+  .summarize-btn {
+    flex-shrink: 0;
+    padding: 9px 18px;
+    font-size: 13px;
+  }
+
+  .summarize-progress-track {
+    max-width: none;
+    flex: 1;
+  }
+
+  /* ── Insight grid: single column ─────────────── */
+  .insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Article hero image: shorter on mobile ────── */
+  .article-image-wrapper {
+    /* Override JS inline height for very small screens */
+    max-height: 180px !important;
+  }
+
+  /* ── Card hover: disable transform on touch ────── */
+  .article-card:hover {
+    transform: none;
+  }
+
+  /* ── Feed list padding ────────────────────────── */
+  .feed-list {
+    padding: 8px;
+  }
+
+  /* ── Scroll FAB: adjust position ─────────────── */
+  .scroll-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 16px;
+    z-index: 100;
+  }
+}
+
+/* ── Very small phones (< 380px) ─────────────────── */
+@media (max-width: 380px) {
+  .logo-text {
+    font-size: 15px;
+  }
+
+  .header-tag {
+    display: none; /* hide tag to save space on tiny screens */
+  }
+
+  .article-title {
+    font-size: 18px;
+  }
+
+  .length-btn {
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+
+  .summarize-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
 }

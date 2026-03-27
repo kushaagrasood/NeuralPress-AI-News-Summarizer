@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchSummary } from "../data/gemini";
 import ParagraphSummary from "./ParagraphSummary";
 import StructuredSummary from "./StructuredSummary";
@@ -6,15 +6,21 @@ import StructuredSummary from "./StructuredSummary";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1504711434969-e33886168d5c?w=800&q=70";
 
 function getCategoryClass(category) {
-  const c = (category || "").toUpperCase();
-  if (c === "AI") return "cat-ai";
-  if (c === "SPACE") return "cat-space";
-  if (c.includes("TECH")) return "cat-tech";
-  if (c === "SCIENCE") return "cat-science";
-  return "cat-ai";
+  const c = (category || "").toLowerCase();
+  if (c === "ai") return "cat-ai";
+  if (c === "space") return "cat-space";
+  if (c === "science") return "cat-science";
+  if (c === "health") return "cat-health";
+  if (c === "finance") return "cat-finance";
+  if (c === "politics") return "cat-politics";
+  if (c === "environment") return "cat-environment";
+  if (c === "sports") return "cat-sports";
+  if (c === "entertainment") return "cat-entertainment";
+  if (c.includes("tech")) return "cat-tech";
+  return "cat-general";
 }
 
-export default function SummaryPanel({ article }) {
+export default function SummaryPanel({ article, onBack, getCached, setCached }) {
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -24,17 +30,38 @@ export default function SummaryPanel({ article }) {
 
   const paragraphRef = useRef(null);
 
+  // ── When article or length changes, load from cache or clear ──
+  useEffect(() => {
+    if (!article) {
+      setSummaryData(null);
+      setError(null);
+      setLoading(false);
+      setProgress(0);
+      return;
+    }
+
+    const cached = getCached(article.id, length);
+    if (cached) {
+      setSummaryData(cached);
+      setProgress(100);
+      setError(null);
+    } else {
+      // New article (or length not yet cached) — clear the panel
+      setSummaryData(null);
+      setError(null);
+      setProgress(0);
+    }
+  }, [article?.id, length]);
+
   // Attach scroll listener to the panel to collapse the image
   const panelRef = useCallback((node) => {
     if (!node) return;
     const handleScroll = () => {
       const scrollY = node.scrollTop;
-      // Shrink image from 220px to 0 over the first 200px of scroll
       const newHeight = Math.max(0, 220 - scrollY);
       setImageHeight(newHeight);
     };
     node.addEventListener("scroll", handleScroll, { passive: true });
-    // Reset image height when panel content changes
     setImageHeight(220);
     return () => node.removeEventListener("scroll", handleScroll);
   }, [article]);
@@ -46,7 +73,6 @@ export default function SummaryPanel({ article }) {
     setSummaryData(null);
     setProgress(0);
 
-    // Animate progress bar while loading
     let p = 0;
     const tick = setInterval(() => {
       p += Math.random() * 18;
@@ -59,6 +85,7 @@ export default function SummaryPanel({ article }) {
       clearInterval(tick);
       setProgress(100);
       setSummaryData(result);
+      setCached(article.id, length, result);
     } catch (err) {
       clearInterval(tick);
       setProgress(0);
@@ -82,9 +109,18 @@ export default function SummaryPanel({ article }) {
   }
 
   const catClass = getCategoryClass(article.category);
+  const isCached = !!getCached(article.id, length);
 
   return (
     <main className="summary-panel" ref={panelRef}>
+      {/* Mobile back button */}
+      <button className="mobile-back-btn" onClick={onBack} aria-label="Back to feed">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back to Feed
+      </button>
+
       {/* Collapsible hero image */}
       <div
         className="article-image-wrapper"
@@ -105,13 +141,15 @@ export default function SummaryPanel({ article }) {
           {article.category}
         </span>
         <h1 className="article-title">{article.headline}</h1>
+        {article.sourceName && (
+          <p className="article-source">— {article.sourceName}</p>
+        )}
       </div>
 
       {/* Article body */}
       <div className="article-header">
         <p className="article-body">{article.body}</p>
 
-        {/* Source link */}
         {article.sourceUrl && article.sourceUrl !== "#" && (
           <a
             className="source-link"
@@ -143,7 +181,7 @@ export default function SummaryPanel({ article }) {
             onClick={handleSummarize}
             disabled={loading}
           >
-            {loading ? "Analyzing..." : "Summarize"}
+            {loading ? "Analyzing..." : isCached ? "Re-summarize" : "Summarize"}
           </button>
           <div className="summarize-progress-track">
             <div
@@ -167,7 +205,7 @@ export default function SummaryPanel({ article }) {
 
       {/* Summary Output */}
       {summaryData && !loading && (
-        <div className="summary-output">
+        <div className="summary-output fade-in">
           <StructuredSummary sections={summaryData.sections} />
 
           <div ref={paragraphRef}>

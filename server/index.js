@@ -103,12 +103,13 @@ app.get("/api/news", newsLimiter, async (req, res) => {
     const articles = newsList.map((n, i) => ({
       id: n.id || `${i}-${n.url}`,
       headline: n.title || "Untitled Article",
-      category: getCategory(`${n.title} ${n.text}`),
+      category: normalizeCategory(n.category) || getCategory(`${n.title} ${n.text}`),
       preview: buildPreview(n.text),
       readTime: estimateReadTime(n.text),
       body: n.text || n.title,
       image: n.image || null,
       sourceUrl: n.url || "#",
+      sourceName: extractSourceName(n.url),
     }));
 
     newsCache = articles;
@@ -211,17 +212,131 @@ app.listen(PORT, () => {
   console.log(`   NewsAPI key: ${WORLDNEWS_API_KEY.slice(0, 8)}...`);
 });
 
-// ── Helpers (mirrors frontend logic — single source of truth on server) ───────
-function getCategory(text) {
-  const t = (text || "").toLowerCase();
-  if (t.includes("ai") || t.includes("artificial intelligence") || t.includes("machine learning")) return "AI";
-  if (t.includes("space") || t.includes("nasa") || t.includes("rocket") || t.includes("satellite")) return "Space";
-  if (t.includes("finance") || t.includes("bank") || t.includes("crypto") || t.includes("stock")) return "Finance";
-  if (t.includes("policy") || t.includes("government") || t.includes("law") || t.includes("regulation")) return "Tech Policy";
-  if (t.includes("science") || t.includes("research") || t.includes("study")) return "Science";
-  if (t.includes("health") || t.includes("medical") || t.includes("disease")) return "Health";
-  if (t.includes("tech") || t.includes("software") || t.includes("app")) return "Tech";
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Map WorldNewsAPI's raw category strings to our display labels.
+// API categories: technology, science, health, politics, business, sports,
+//                 entertainment, environment, food, travel, general, etc.
+const CATEGORY_MAP = {
+  technology: "Tech",
+  science: "Science",
+  health: "Health",
+  politics: "Politics",
+  business: "Finance",
+  finance: "Finance",
+  entertainment: "Entertainment",
+  environment: "Environment",
+  food: "Food",
+  travel: "Travel",
+  sports: "Sports",
+  general: "General",
+};
+
+function normalizeCategory(apiCategory) {
+  if (!apiCategory) return null;
+  return CATEGORY_MAP[apiCategory.toLowerCase()] || null;
+}
+
+// Keyword fallback — only fires when the API returns no category.
+// Uses title-match only (first 120 chars) to avoid false positives from
+// long body text that happens to mention a keyword tangentially.
+function getCategory(titleAndText) {
+  const t = (titleAndText || "").toLowerCase();
+  // Check title portion first (higher confidence)
+  if (/\bai\b|artificial intelligence|machine learning|chatgpt|llm\b/.test(t)) return "AI";
+  if (/\bspace\b|nasa|rocket|satellite|asteroid|orbit/.test(t)) return "Space";
+  if (/crypto|bitcoin|ethereum|\bstock\b|\bbank\b|wall street/.test(t)) return "Finance";
+  if (/\blaw\b|\bregulation\b|\bgovernment\b|\bpolicy\b|legislation/.test(t)) return "Politics";
+  if (/\bresearch\b|\bstudy\b|\bscientists\b|\bdiscovery\b/.test(t)) return "Science";
+  if (/\bhealth\b|medical|disease|\bvaccine\b|hospital/.test(t)) return "Health";
+  if (/\btech\b|software|startup|app\b|gadget|device/.test(t)) return "Tech";
   return "General";
+}
+
+// Extract a human-readable source name from a URL.
+// e.g. "https://www.timesofindia.com/..." → "Times of India"
+// Falls back to the bare hostname if no pretty name is known.
+const SOURCE_NAMES = {
+  "timesofindia.com": "Times of India",
+  "bbc.com": "BBC News",
+  "bbc.co.uk": "BBC News",
+  "nytimes.com": "New York Times",
+  "theguardian.com": "The Guardian",
+  "reuters.com": "Reuters",
+  "apnews.com": "AP News",
+  "bloomberg.com": "Bloomberg",
+  "techcrunch.com": "TechCrunch",
+  "wired.com": "Wired",
+  "theverge.com": "The Verge",
+  "arstechnica.com": "Ars Technica",
+  "washingtonpost.com": "Washington Post",
+  "wsj.com": "Wall Street Journal",
+  "ft.com": "Financial Times",
+  "forbes.com": "Forbes",
+  "cnbc.com": "CNBC",
+  "cnn.com": "CNN",
+  "foxnews.com": "Fox News",
+  "nbcnews.com": "NBC News",
+  "abcnews.go.com": "ABC News",
+  "cbsnews.com": "CBS News",
+  "npr.org": "NPR",
+  "politico.com": "Politico",
+  "axios.com": "Axios",
+  "theatlantic.com": "The Atlantic",
+  "economist.com": "The Economist",
+  "nature.com": "Nature",
+  "scientificamerican.com": "Scientific American",
+  "newscientist.com": "New Scientist",
+  "nypost.com": "New York Post",
+  "independent.co.uk": "The Independent",
+  "telegraph.co.uk": "The Telegraph",
+  "hindustantimes.com": "Hindustan Times",
+  "ndtv.com": "NDTV",
+  "thehindu.com": "The Hindu",
+  "aljazeera.com": "Al Jazeera",
+  "sputniknews.com": "Sputnik News",
+  "scmp.com": "South China Morning Post",
+  "smh.com.au": "Sydney Morning Herald",
+  "theaustralian.com.au": "The Australian",
+  "cbc.ca": "CBC News",
+  "globeandmail.com": "The Globe and Mail",
+  "lemonde.fr": "Le Monde",
+  "spiegel.de": "Der Spiegel",
+  "engadget.com": "Engadget",
+  "zdnet.com": "ZDNet",
+  "venturebeat.com": "VentureBeat",
+  "gizmodo.com": "Gizmodo",
+  "mashable.com": "Mashable",
+  "businessinsider.com": "Business Insider",
+  "inc.com": "Inc.",
+  "fastcompany.com": "Fast Company",
+  "technologyreview.com": "MIT Technology Review",
+  "github.com": "GitHub",
+  "medium.com": "Medium",
+  "substack.com": "Substack",
+};
+
+function extractSourceName(url) {
+  if (!url) return null;
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
+    // Check for exact match first, then try parent domain
+    if (SOURCE_NAMES[hostname]) return SOURCE_NAMES[hostname];
+    // Try stripping one subdomain level (e.g. tech.co.uk → co.uk won't match, but covers cases like news.bbc.co.uk)
+    const parts = hostname.split(".");
+    if (parts.length > 2) {
+      const parent = parts.slice(-2).join(".");
+      if (SOURCE_NAMES[parent]) return SOURCE_NAMES[parent];
+    }
+    // Fallback: prettify the raw hostname (remove TLD, capitalise)
+    const base = parts.slice(0, parts.length > 2 ? -2 : -1).join(" ");
+    return base
+      .split(/[-_]/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ") || hostname;
+  } catch {
+    return null;
+  }
 }
 
 function estimateReadTime(text) {
