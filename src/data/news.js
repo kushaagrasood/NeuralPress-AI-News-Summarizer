@@ -1,5 +1,5 @@
 // ── WorldNews via secure backend proxy ──────────────────────
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001";
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
 // ── In-memory cache (client-side, short-circuits repeat renders) ─────────────
 let cachedArticles = null;
@@ -15,7 +15,13 @@ export async function fetchNews({ topic = "technology", number = 15 } = {}) {
   }
 
   const params = new URLSearchParams({ topic, number: String(number) });
-  const response = await fetch(`${API_BASE}/api/news?${params}`);
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/api/news?${params}`);
+  } catch (networkErr) {
+    console.error("News network error:", networkErr);
+    throw new Error("Could not reach the NeuralPress server. Start the backend and try again.");
+  }
 
   if (!response.ok) {
     let errMsg = `HTTP ${response.status}`;

@@ -1,5 +1,5 @@
 // ── Gemini summarise via secure backend proxy ─────────────
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3001";
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 const MAX_SUMMARY_ARTICLE_CHARS = 20_000;
 
 export async function fetchSummary(articleText, length = "medium") {

@@ -35,6 +35,10 @@ app.use(
     origin: (origin, cb) => {
       // Allow server-to-server / curl (no origin header) only in dev
       if (!origin && process.env.NODE_ENV !== "production") return cb(null, true);
+      if (process.env.NODE_ENV !== "production") {
+        const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin || "");
+        if (isLocalhost) return cb(null, true);
+      }
       if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
       cb(new Error(`CORS: origin ${origin} not allowed`));
     },
