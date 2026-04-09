@@ -71,6 +71,7 @@ app.use(globalLimiter);
 let newsCache = null;
 let newsCacheTs = 0;
 const NEWS_CACHE_MS = 5 * 60 * 1000;
+const MAX_SUMMARY_ARTICLE_CHARS = 20_000;
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
@@ -108,17 +109,32 @@ app.get("/api/news", newsLimiter, async (req, res) => {
       return res.status(404).json({ error: "No articles found." });
     }
 
-    const articles = newsList.map((n, i) => ({
-      id: n.id || `${i}-${n.url}`,
-      headline: n.title || "Untitled Article",
-      category: normalizeCategory(n.category) || getCategory(`${n.title} ${n.text}`),
-      preview: buildPreview(n.text),
-      readTime: estimateReadTime(n.text),
-      body: n.text || n.title,
-      image: n.image || null,
-      sourceUrl: n.url || "#",
-      sourceName: extractSourceName(n.url),
-    }));
+    const articles = newsList
+      .map((n, i) => {
+        const body = sanitizeArticleText(n.text || n.title || "");
+        const image = normalizeImageUrl(n.image);
+
+        // Keep only display-ready content in the feed.
+        if (!image) return null;
+        if (!body || hasUnusualFormatting(body)) return null;
+
+        return {
+          id: n.id || `${i}-${n.url}`,
+          headline: n.title || "Untitled Article",
+          category: normalizeCategory(n.category) || getCategory(`${n.title} ${body}`),
+          preview: buildPreview(body),
+          readTime: estimateReadTime(body),
+          body,
+          image,
+          sourceUrl: n.url || "#",
+          sourceName: extractSourceName(n.url),
+        };
+      })
+      .filter(Boolean);
+
+    if (articles.length === 0) {
+      return res.status(404).json({ error: "No displayable articles found." });
+    }
 
     newsCache = articles;
     newsCacheTs = now;
@@ -138,7 +154,7 @@ app.post("/api/summarise", geminiLimiter, async (req, res) => {
     return res.status(400).json({ error: "articleText is required and must be a string." });
   }
 
-  if (articleText.length > 20_000) {
+  if (articleText.length > MAX_SUMMARY_ARTICLE_CHARS) {
     return res.status(400).json({ error: "articleText is too long (max 20,000 chars)." });
   }
 
@@ -358,4 +374,41 @@ function buildPreview(text) {
   if (!text) return "";
   const trimmed = text.slice(0, 120).trim();
   return trimmed.length < text.length ? trimmed + "..." : trimmed;
+}
+
+function normalizeImageUrl(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== "string") return null;
+  const trimmed = imageUrl.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
+
+function sanitizeArticleText(text) {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SUMMARY_ARTICLE_CHARS);
+}
+
+function hasUnusualFormatting(text) {
+  if (!text) return true;
+
+  const sample = text.slice(0, 4000);
+  const lettersDigitsSpaces = (sample.match(/[A-Za-z0-9\s]/g) || []).length;
+  const nonStandardChars = sample.length - lettersDigitsSpaces;
+  const nonStandardRatio = nonStandardChars / sample.length;
+
+  const repeatedPunctuation = /([!?.,:\-_=+*#@~`$%^&(){}\[\]\\\/])\1{4,}/.test(sample);
+  const excessiveLineBreaks = /(\n\s*){5,}/.test(text);
+  const urlCount = (sample.match(/https?:\/\//gi) || []).length;
+
+  return (
+    sample.length < 80 ||
+    nonStandardRatio > 0.35 ||
+    repeatedPunctuation ||
+    excessiveLineBreaks ||
+    urlCount > 4
+  );
 }

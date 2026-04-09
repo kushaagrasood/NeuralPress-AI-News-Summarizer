@@ -46,7 +46,7 @@ export default function ArticleCard({ article, isSelected, onSelect }) {
         <p className="card-preview">{article.preview}</p>
       </div>
       <div className="card-footer">
-        <span className="read-time">⏱ {article.readTime} read</span>
+        <span className="read-time">{article.readTime} read</span>
       </div>
     </div>
   );

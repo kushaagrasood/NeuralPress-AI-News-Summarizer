@@ -102,7 +102,7 @@ export default function SummaryPanel({ article, onBack, getCached, setCached }) 
   if (!article) {
     return (
       <main className="summary-panel empty-state">
-        <div className="empty-icon">⬡</div>
+        <div className="empty-mark" aria-hidden="true" />
         <p>Select an article from the feed to begin</p>
       </main>
     );
